@@ -4,7 +4,7 @@ x-variables: &variables
   ENV_STAGE: local
 
 services:
-  web:
+  authorization:
     build:
       context: .
       dockerfile: docker/dev/web/Dockerfile
@@ -40,6 +40,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data/
       - postgres_socket:/var/run/postgresql/
+    ports:
+      - "5431:5432"
     env_file:
       - docker/dev/env/.db.env
     networks:
@@ -76,12 +78,11 @@ services:
       - ./web/:/usr/src/web/:cached
       - redis_socket:/redis_socket
       - postgres_socket:/postgres_socket
-    environment:
-      <<: *variables
     env_file:
       - docker/dev/env/.env
       - docker/dev/env/.db.env
       - docker/prod/env/.data.env
+      - docker/prod/env/.email.env
     depends_on: [redis]
     restart: unless-stopped
     networks:

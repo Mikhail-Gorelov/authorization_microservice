@@ -28,7 +28,5 @@ CELERY_BROKER_TRANSPORT_OPTIONS = {
 celery_exchange = Exchange('celery', type='direct')  # topic, fanout
 
 CELERY_TASK_ROUTES = {
-    '*': {'queue': 'celery'},
+    'email_sender.tasks.*': {'queue': 'emails'},
 }
-
-CELERY_TASK_QUEUES = (Queue('celery', exchange=celery_exchange, queue_arguments={'x-queue-mode': 'lazy'}),)

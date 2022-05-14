@@ -5,7 +5,12 @@ from django.contrib.auth import get_user_model
 from django.core import signing
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
-from auth_app import models
+from main.decorators import except_shell
+from rest_framework.request import Request
+from rest_framework.response import Response
+
+from src.celery import app
+from main.services import MainService
 
 User = get_user_model()
 
@@ -24,16 +29,21 @@ class AuthAppService:
     def send_confirmation_email(user: User):
         data = {
             "subject": "Confirmation email",
+            'template_name': "auth_app/success_registration.html",
             "to_email": user.email,
             "context": {
-                "url": AuthAppService.get_confirmation_url(user),
+                "activate_url": AuthAppService.get_confirmation_url(user),
                 "full_name": user.full_name()
             }
         }
+        result = app.send_task(
+            name='email_sender.tasks.send_information_email',
+            kwargs=data,
+        )
+        print(result)
         return data
 
     @staticmethod
-    def confirm(user: User) -> User:
-        user.is_active = True
-        user.save()
-        return user
+    @except_shell((User.DoesNotExist,))
+    def get_user(email: str) -> User:
+        return User.objects.get(email=email)
