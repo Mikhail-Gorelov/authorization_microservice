@@ -1,3 +1,4 @@
+import os
 import re
 from urllib.parse import urljoin
 
@@ -21,6 +22,11 @@ class AuthAppService:
         return User.objects.filter(email=email).exists()
 
     @staticmethod
+    def get_reset_url(uid, token):
+        url = f'/password-reset?uidb64={uid}&token={token}'
+        return settings.FRONTEND_SITE + str(url)
+
+    @staticmethod
     def get_confirmation_url(user: User) -> str:
         url = f'/confirm?key={user.confirmation_key}'
         return urljoin(settings.FRONTEND_SITE, url)
@@ -29,18 +35,17 @@ class AuthAppService:
     def send_confirmation_email(user: User):
         data = {
             "subject": "Confirmation email",
-            'template_name': "auth_app/success_registration.html",
+            'template_name': '../templates/auth_app/success_registration.html',
             "to_email": user.email,
             "context": {
                 "activate_url": AuthAppService.get_confirmation_url(user),
                 "full_name": user.full_name()
             }
         }
-        result = app.send_task(
+        app.send_task(
             name='email_sender.tasks.send_information_email',
             kwargs=data,
         )
-        print(result)
         return data
 
     @staticmethod

@@ -13,11 +13,6 @@ urlpatterns = [
     path('verify-email/', views.VerifyEmailView.as_view(), name='verify-email'),
     path('password/reset/', views.PasswordResetView.as_view(), name='password-reset'),
     path('password/reset/confirm/', views.PasswordResetConfirmView.as_view(), name='password-reset-confirm-email'),
-    path(
-        'password-reset/<uidb64>/<token>/',
-        TemplateView.as_view(template_name='auth_app/includes/reset_password_email_link.html'),
-        name='password-reset-confirm',
-    ),
     path('logout/', views.LogoutView.as_view(), name='logout')
 ]
 

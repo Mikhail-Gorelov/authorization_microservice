@@ -39,58 +39,28 @@ class SignUpView(CreateAPIView):
     serializer_class = serializers.SignUpSerializer
 
 
-class VerifyEmailView(GenericAPIView):
+class VerifyEmailView(CreateAPIView):
     permission_classes = (AllowAny,)
     serializer_class = serializers.VerifyEmailSerializer
 
-    def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({'detail': _('ok')}, status=status.HTTP_200_OK)
 
-
-class PasswordResetView(GenericAPIView):
+class PasswordResetView(CreateAPIView):
     serializer_class = serializers.PasswordResetSerializer
     permission_classes = (AllowAny,)
 
-    def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(
-            {'detail': _('Password reset e-mail has been sent.')},
-            status=status.HTTP_200_OK,
-        )
 
-
-class PasswordResetConfirmView(GenericAPIView):
+class PasswordResetConfirmView(CreateAPIView):
     permission_classes = (AllowAny,)
     serializer_class = serializers.PasswordResetConfirmSerializer
-
-    def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(
-            {'detail': _('Password has been reset with the new password.')},
-        )
 
 
 class LogoutView(APIView):
     permission_classes = (AllowAny,)
-    allowed_methods = ('POST', 'OPTIONS')
-
-    def get(self, request, *args, **kwargs):
-        if getattr(settings, 'ACCOUNT_LOGOUT_ON_GET', False):
-            response = self.logout(request)
-        else:
-            response = self.http_method_not_allowed(request, *args, **kwargs)
-
-        return self.finalize_response(request, response, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        return self.logout(request)
+        self.session_logout()
+        response = self.full_logout(request)
+        return response
 
     def session_logout(self):
         user_logged_out = Signal()
@@ -111,37 +81,23 @@ class LogoutView(APIView):
         refresh_token = request.COOKIES.get(refresh_cookie_name)
         if refresh_cookie_name:
             response.delete_cookie(refresh_cookie_name)
-        if 'rest_framework_simplejwt.token_blacklist' in settings.INSTALLED_APPS:
-            # add refresh token to blacklist
-            try:
-                token = RefreshToken(refresh_token)
-                token.blacklist()
-            except KeyError:
-                response.data = {"detail": _("Refresh token was not included in request data.")}
-                response.status_code = HTTP_401_UNAUTHORIZED
-            except (TokenError, AttributeError, TypeError) as error:
-                if hasattr(error, 'args'):
-                    if 'Token is blacklisted' in error.args or 'Token is invalid or expired' in error.args:
-                        response.data = {"detail": _(error.args[0])}
-                        response.status_code = HTTP_401_UNAUTHORIZED
-                    else:
-                        response.data = {"detail": _("An error has occurred.")}
-                        response.status_code = HTTP_500_INTERNAL_SERVER_ERROR
-
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+        except KeyError:
+            response.data = {"detail": _("Refresh token was not included in request data.")}
+            response.status_code = HTTP_401_UNAUTHORIZED
+        except (TokenError, AttributeError, TypeError) as error:
+            if hasattr(error, 'args'):
+                if 'Token is blacklisted' in error.args or 'Token is invalid or expired' in error.args:
+                    response.data = {"detail": _(error.args[0])}
+                    response.status_code = HTTP_401_UNAUTHORIZED
                 else:
                     response.data = {"detail": _("An error has occurred.")}
                     response.status_code = HTTP_500_INTERNAL_SERVER_ERROR
 
-        else:
-            message = _(
-                "Neither cookies or blacklist are enabled, so the token "
-                "has not been deleted server side. Please make sure the token is deleted client side."
-            )
-            response.data = {"detail": message}
-            response.status_code = HTTP_200_OK
-        return response
+            else:
+                response.data = {"detail": _("An error has occurred.")}
+                response.status_code = HTTP_500_INTERNAL_SERVER_ERROR
 
-    def logout(self, request):
-        self.session_logout()
-        response = self.full_logout(request)
         return response

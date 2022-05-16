@@ -70,6 +70,7 @@ THIRD_PARTY_APPS = [
     'rosetta',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
+    'phonenumber_field'
 ]
 
 LOCAL_APPS = [

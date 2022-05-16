@@ -1,11 +1,12 @@
 from typing import TypeVar
-
+from phonenumber_field.modelfields import PhoneNumberField
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core import signing
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from . import choices
 from .managers import UserManager
 
 UserType = TypeVar('UserType', bound='User')
@@ -15,6 +16,9 @@ class User(AbstractUser):
 
     username = None
     email = models.EmailField(_('Email address'), unique=True)
+    phone_number = PhoneNumberField(null=True, blank=True, unique=True, default=None)
+    gender = models.IntegerField(choices=choices.GenderChoice.choices, null=True)
+    birthday = models.DateField(null=True, blank=True)
 
     USERNAME_FIELD: str = 'email'
     REQUIRED_FIELDS: list[str] = []
