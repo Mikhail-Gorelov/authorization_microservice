@@ -58,20 +58,8 @@ class LogoutView(APIView):
     permission_classes = (AllowAny,)
 
     def post(self, request, *args, **kwargs):
-        self.session_logout()
         response = self.full_logout(request)
         return response
-
-    def session_logout(self):
-        user_logged_out = Signal()
-        user = getattr(self.request, 'user', None)
-        if not getattr(user, 'is_authenticated', True):
-            user = None
-        user_logged_out.send(sender=user.__class__, request=self.request, user=user)
-        self.request.session.flush()
-        if hasattr(self.request, 'user'):
-            from django.contrib.auth.models import AnonymousUser
-            self.request.user = AnonymousUser()
 
     def full_logout(self, request):
         response = Response({"detail": _("Successfully logged out.")}, status=HTTP_200_OK)

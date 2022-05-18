@@ -35,7 +35,7 @@ class AuthAppService:
     def send_confirmation_email(user: User):
         data = {
             "subject": "Confirmation email",
-            'template_name': '../templates/auth_app/success_registration.html',
+            'template_name': 'auth_app/success_registration.html',
             "to_email": user.email,
             "context": {
                 "activate_url": AuthAppService.get_confirmation_url(user),
