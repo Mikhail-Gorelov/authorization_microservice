@@ -49,6 +49,23 @@ class AuthAppService:
         return data
 
     @staticmethod
+    def send_verify_email(email: str, user: User, url: str):
+        data = {
+            'subject': 'Your reset e-mail',
+            'template_name': 'auth_app/reset_password_sent.html',
+            'to_email': email,
+            'context': {
+                'user': user.get_full_name(),
+                'reset_url': url,
+            },
+        }
+        app.send_task(
+            name='email_sender.tasks.send_information_email',
+            kwargs=data,
+        )
+        return data
+
+    @staticmethod
     @except_shell((User.DoesNotExist,))
     def get_user(email: str) -> User:
         return User.objects.get(email=email)

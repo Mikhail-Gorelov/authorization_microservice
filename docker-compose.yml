@@ -40,8 +40,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data/
       - postgres_socket:/var/run/postgresql/
-    ports:
-      - "5431:5432"
+#    ports:
+#      - "5431:5432"
     env_file:
       - docker/dev/env/.db.env
     networks:

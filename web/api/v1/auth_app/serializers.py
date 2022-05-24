@@ -76,8 +76,8 @@ class SignUpSerializer(serializers.Serializer):
     phone_number = serializers.CharField(min_length=7, required=True)
     password = serializers.CharField(write_only=True, min_length=7)
     password1 = serializers.CharField(write_only=True, min_length=7)
-    birthday = serializers.DateField(required=True)
-    gender = serializers.ChoiceField(required=True, choices=choices.GenderChoice.choices)
+    birthday = serializers.DateField(required=False)
+    gender = serializers.ChoiceField(required=False, choices=choices.GenderChoice.choices)
 
     def validate_phone_number(self, phone_number: str) -> str:
         pattern = re.compile("^\+?1?\d{7,15}$")
@@ -129,20 +129,7 @@ class PasswordResetSerializer(serializers.Serializer):
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
         url = AuthAppService.get_reset_url(uid=uid, token=token)
-
-        data = {
-            'subject': 'Your reset e-mail',
-            'template_name': 'auth_app/reset_password_sent.html',
-            'to_email': email,
-            'context': {
-                'user': user.get_full_name(),
-                'reset_url': url,
-            },
-        }
-        app.send_task(
-            name='email_sender.tasks.send_information_email',
-            kwargs=data,
-        )
+        AuthAppService.send_verify_email(email=email, user=user, url=url)
 
 
 class PasswordResetConfirmSerializer(serializers.Serializer):

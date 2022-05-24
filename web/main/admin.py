@@ -1,11 +1,19 @@
 from django.conf import settings
 from django.contrib import admin
+from .models import Address
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Group
 from django.utils.translation import gettext_lazy as _
 
 User = get_user_model()
+
+
+@admin.register(Address)
+class AddressAdmin(admin.ModelAdmin):
+    list_display = ('id', 'country')
+    list_filter = ('country',)
+    search_fields = ('country',)
 
 
 @admin.register(User)
@@ -15,12 +23,13 @@ class CustomUserAdmin(UserAdmin):
     search_fields = ('first_name', 'last_name', 'email')
 
     fieldsets = (
-        (_('Personal info'), {'fields': ('id', 'first_name', 'last_name', 'email', 'phone_number')}),
+        (_('Personal info'), {'fields': ('id', 'first_name', 'last_name', 'email', 'phone_number', 'avatar',
+                                         'default_shipping_address', 'default_billing_address')}),
         (_('Secrets'), {'fields': ('password',)}),
         (
             _('Permissions'),
             {
-                'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
+                'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions', 'addresses'),
             },
         ),
         (_('Important dates'), {'fields': ('last_login', 'date_joined')}),

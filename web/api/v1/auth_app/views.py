@@ -11,6 +11,7 @@ from rest_framework.status import HTTP_200_OK, HTTP_401_UNAUTHORIZED, HTTP_500_I
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
+from microservice_request.permissions import HasApiKeyOrIsAuthenticated
 
 from . import serializers
 from rest_framework.generics import GenericAPIView
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class LoginView(GenericAPIView):
-    permission_classes = (AllowAny,)
+    permission_classes = (HasApiKeyOrIsAuthenticated,)
     serializer_class = serializers.LoginSerializer
 
     def post(self, request):
@@ -35,27 +36,27 @@ class LoginView(GenericAPIView):
 
 
 class SignUpView(CreateAPIView):
-    permission_classes = (AllowAny,)
+    permission_classes = (HasApiKeyOrIsAuthenticated,)
     serializer_class = serializers.SignUpSerializer
 
 
 class VerifyEmailView(CreateAPIView):
-    permission_classes = (AllowAny,)
+    permission_classes = (HasApiKeyOrIsAuthenticated,)
     serializer_class = serializers.VerifyEmailSerializer
 
 
 class PasswordResetView(CreateAPIView):
     serializer_class = serializers.PasswordResetSerializer
-    permission_classes = (AllowAny,)
+    permission_classes = (HasApiKeyOrIsAuthenticated,)
 
 
 class PasswordResetConfirmView(CreateAPIView):
-    permission_classes = (AllowAny,)
+    permission_classes = (HasApiKeyOrIsAuthenticated,)
     serializer_class = serializers.PasswordResetConfirmSerializer
 
 
 class LogoutView(APIView):
-    permission_classes = (AllowAny,)
+    permission_classes = (HasApiKeyOrIsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
         response = self.full_logout(request)
