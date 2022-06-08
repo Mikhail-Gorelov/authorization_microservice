@@ -6,18 +6,20 @@ from rest_framework import status
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.permissions import AllowAny
-from rest_framework.generics import get_object_or_404, CreateAPIView
+from rest_framework.generics import get_object_or_404, CreateAPIView, RetrieveAPIView
 from rest_framework.status import HTTP_200_OK, HTTP_401_UNAUTHORIZED, HTTP_500_INTERNAL_SERVER_ERROR
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from microservice_request.permissions import HasApiKeyOrIsAuthenticated
+from rest_framework_simplejwt.views import TokenVerifyView, TokenObtainPairView
 
 from . import serializers
 from rest_framework.generics import GenericAPIView
 from django.contrib.auth import get_user_model
 from rest_framework.response import Response
 
+from .serializers import SetDataJWTSerializer
 from .services import AuthAppService
 
 User = get_user_model()
@@ -26,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class LoginView(GenericAPIView):
-    permission_classes = (HasApiKeyOrIsAuthenticated,)
+    permission_classes = (AllowAny,)
     serializer_class = serializers.LoginSerializer
 
     def post(self, request):
@@ -35,28 +37,27 @@ class LoginView(GenericAPIView):
         return Response(serializer.data)
 
 
-class SignUpView(CreateAPIView):
-    permission_classes = (HasApiKeyOrIsAuthenticated,)
-    serializer_class = serializers.SignUpSerializer
+class SignUpEmailView(CreateAPIView):
+    serializer_class = serializers.SignUpEmailSerializer
+
+
+class SignUpPhoneView(CreateAPIView):
+    serializer_class = serializers.SignUpPhoneSerializer
 
 
 class VerifyEmailView(CreateAPIView):
-    permission_classes = (HasApiKeyOrIsAuthenticated,)
     serializer_class = serializers.VerifyEmailSerializer
 
 
 class PasswordResetView(CreateAPIView):
     serializer_class = serializers.PasswordResetSerializer
-    permission_classes = (HasApiKeyOrIsAuthenticated,)
 
 
 class PasswordResetConfirmView(CreateAPIView):
-    permission_classes = (HasApiKeyOrIsAuthenticated,)
     serializer_class = serializers.PasswordResetConfirmSerializer
 
 
 class LogoutView(APIView):
-    permission_classes = (HasApiKeyOrIsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
         response = self.full_logout(request)
@@ -90,3 +91,17 @@ class LogoutView(APIView):
                 response.status_code = HTTP_500_INTERNAL_SERVER_ERROR
 
         return response
+
+
+class VerifyJWTView(TokenVerifyView):
+    pass
+
+class SetDataJWTView(TokenObtainPairView):
+    serializer_class = SetDataJWTSerializer
+
+
+class GetUserView(RetrieveAPIView):
+    serializer_class = serializers.GetUserSerializer
+
+    def get_object(self):
+        return self.request.user

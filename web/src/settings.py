@@ -211,8 +211,8 @@ LOCALE_PATHS = (os.path.join(BASE_DIR, 'locale'),)
 
 LANGUAGES = (('en', _('English')),)
 
-SESSION_COOKIE_NAME = 'sessionid'
-CSRF_COOKIE_NAME = 'csrftoken'
+SESSION_COOKIE_NAME = 'sessionid_authorization'
+CSRF_COOKIE_NAME = 'csrftoken_authorization'
 
 if DEBUG:
     ROSETTA_SHOW_AT_ADMIN_PANEL = True

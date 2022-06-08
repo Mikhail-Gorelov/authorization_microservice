@@ -34,7 +34,7 @@ class Address(models.Model):
 
 class User(AbstractUser):
     username = None
-    email = models.EmailField(_('Email address'), unique=True)
+    email = models.EmailField(_('Email address'), unique=True, null=True, blank=True)
     phone_number = PhoneNumberField(null=True, blank=True, unique=True, default=None)
     gender = models.IntegerField(choices=choices.GenderChoice.choices, null=True)
     birthday = models.DateField(null=True, blank=True)
@@ -59,7 +59,10 @@ class User(AbstractUser):
         verbose_name_plural = _('Users')
 
     def __str__(self) -> str:
-        return self.email
+        if self.email:
+            return self.email
+        else:
+            return str(self.phone_number)
 
     def full_name(self) -> str:
         return super().get_full_name()

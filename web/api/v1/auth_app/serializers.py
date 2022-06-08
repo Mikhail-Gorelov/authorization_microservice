@@ -7,6 +7,7 @@ from django.utils import timezone
 from rest_framework import serializers
 from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils.http import urlsafe_base64_decode as uid_decoder
 from typing import TYPE_CHECKING, Optional
@@ -69,23 +70,10 @@ class LoginSerializer(serializers.Serializer):
         return tokens
 
 
-class SignUpSerializer(serializers.Serializer):
-    first_name = serializers.CharField(min_length=2, max_length=100, required=True)
-    last_name = serializers.CharField(min_length=2, max_length=100, required=True)
+class SignUpEmailSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
-    phone_number = serializers.CharField(min_length=7, required=True)
     password = serializers.CharField(write_only=True, min_length=7)
     password1 = serializers.CharField(write_only=True, min_length=7)
-    birthday = serializers.DateField(required=False)
-    gender = serializers.ChoiceField(required=False, choices=choices.GenderChoice.choices)
-
-    def validate_phone_number(self, phone_number: str) -> str:
-        pattern = re.compile("^\+?1?\d{7,15}$")
-        if not pattern.match(phone_number):
-            raise serializers.ValidationError(_("Wrong phone number format"))
-        if User.objects.filter(phone_number=phone_number).exists():
-            raise serializers.ValidationError(_("User with specified number already exists"))
-        return phone_number
 
     def validate_email(self, email: str) -> str:
         if AuthAppService.is_email_exists(email):
@@ -100,6 +88,31 @@ class SignUpSerializer(serializers.Serializer):
     def save(self, **kwargs):
         del self.validated_data['password1']
         user = User.objects.create_user(**self.validated_data, is_active=False)
+        AuthAppService.send_confirmation_email(user)
+        return user
+
+
+class SignUpPhoneSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(min_length=7, required=True)
+    password = serializers.CharField(write_only=True, min_length=7)
+    password1 = serializers.CharField(write_only=True, min_length=7)
+
+    def validate_phone_number(self, phone_number: str) -> str:
+        pattern = re.compile("^\+?1?\d{7,15}$")
+        if not pattern.match(phone_number):
+            raise serializers.ValidationError(_("Wrong phone number format"))
+        if User.objects.filter(phone_number=phone_number).exists():
+            raise serializers.ValidationError(_("User with specified number already exists"))
+        return phone_number
+
+    def validate(self, attrs: dict) -> dict:
+        if attrs['password'] != attrs['password1']:
+            raise serializers.ValidationError(_("Passwords does not match"))
+        return attrs
+
+    def save(self, **kwargs):
+        del self.validated_data['password1']
+        user = User.objects.create_user_by_phone(**self.validated_data, is_active=False)
         AuthAppService.send_confirmation_email(user)
         return user
 
@@ -161,3 +174,20 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     def save(self, **kwargs):
         self.user.set_password(self.validated_data['new_password1'])
         self.user.save(update_fields=['password'])
+
+
+class SetDataJWTSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        user_name = user.full_name()
+        token['email'] = user.email
+        token['phone_number'] = user.phone_number
+        token['full_name'] = user_name
+        return token
+
+
+class GetUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("first_name", "last_name",)

@@ -19,7 +19,7 @@ class AddressAdmin(admin.ModelAdmin):
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
     ordering = ('-id',)
-    list_display = ('email', 'full_name', 'is_active')
+    list_display = ('email', 'phone_number', 'full_name', 'is_active')
     search_fields = ('first_name', 'last_name', 'email')
 
     fieldsets = (
@@ -29,7 +29,7 @@ class CustomUserAdmin(UserAdmin):
         (
             _('Permissions'),
             {
-                'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions', 'addresses'),
+                'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
             },
         ),
         (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
