@@ -19,7 +19,6 @@ from rest_framework.generics import GenericAPIView
 from django.contrib.auth import get_user_model
 from rest_framework.response import Response
 
-from .serializers import SetDataJWTSerializer
 from .services import AuthAppService
 
 User = get_user_model()
@@ -64,7 +63,10 @@ class LogoutView(APIView):
         return response
 
     def full_logout(self, request):
-        response = Response({"detail": _("Successfully logged out.")}, status=HTTP_200_OK)
+        response = Response({
+            "detail": _("Successfully logged out.")
+        },
+            status=HTTP_200_OK)
         if cookie_name := getattr(settings, 'JWT_AUTH_COOKIE', None):
             response.delete_cookie(cookie_name)
         refresh_cookie_name = getattr(settings, 'JWT_AUTH_REFRESH_COOKIE', None)
@@ -90,14 +92,12 @@ class LogoutView(APIView):
                 response.data = {"detail": _("An error has occurred.")}
                 response.status_code = HTTP_500_INTERNAL_SERVER_ERROR
 
+        response.data['access_token'] = str(token.access_token)
         return response
 
 
 class VerifyJWTView(TokenVerifyView):
     pass
-
-class SetDataJWTView(TokenObtainPairView):
-    serializer_class = SetDataJWTSerializer
 
 
 class GetUserView(RetrieveAPIView):

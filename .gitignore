@@ -23,3 +23,5 @@ backup
 build
 *.mo
 coverage.xml
+web/signing_key.pub
+web/signing_key

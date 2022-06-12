@@ -50,8 +50,8 @@ class LoginSerializer(serializers.Serializer):
         return_expiration_times = getattr(settings, 'JWT_AUTH_RETURN_EXPIRATION', False)
 
         tokens = {
-            'access_token': str(refresh.access_token),
-            'refresh_token': str(refresh),
+            'access_token': str(self.get_token(refresh.access_token)),
+            'refresh_token': str(self.get_token(refresh)),
         }
 
         if return_expiration_times:
@@ -68,6 +68,13 @@ class LoginSerializer(serializers.Serializer):
         tokens['user'] = UserLoginSerializer(self.user).data
 
         return tokens
+
+    def get_token(self, token):
+        user_name = self.user.full_name()
+        token['email'] = self.user.email
+        token['phone_number'] = self.user.phone_number
+        token['full_name'] = user_name
+        return token
 
 
 class SignUpEmailSerializer(serializers.Serializer):
@@ -174,17 +181,6 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     def save(self, **kwargs):
         self.user.set_password(self.validated_data['new_password1'])
         self.user.save(update_fields=['password'])
-
-
-class SetDataJWTSerializer(TokenObtainPairSerializer):
-    @classmethod
-    def get_token(cls, user):
-        token = super().get_token(user)
-        user_name = user.full_name()
-        token['email'] = user.email
-        token['phone_number'] = user.phone_number
-        token['full_name'] = user_name
-        return token
 
 
 class GetUserSerializer(serializers.ModelSerializer):

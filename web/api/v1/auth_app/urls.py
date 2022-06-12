@@ -19,7 +19,6 @@ urlpatterns = [
     path('logout/', views.LogoutView.as_view(), name='logout'),
     path('verify-jwt/', views.VerifyJWTView.as_view(), name='verify-jwt'),
     path('refresh-jwt/', TokenRefreshView.as_view(), name='refresh-jwt'),
-    path('set-data-jwt/', views.SetDataJWTView.as_view(), name='set-data-jwt'),
     path('user/user/', views.GetUserView.as_view(), name='get_user')
 ]
 

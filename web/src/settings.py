@@ -96,6 +96,14 @@ MIDDLEWARE = [
 
 JWT_AUTH_RETURN_EXPIRATION = True
 
+
+def get_file(file_url):
+    if os.path.isfile(file_url):
+        with open(file_url) as f:
+            return f.read()
+    return None
+
+
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
@@ -104,8 +112,8 @@ SIMPLE_JWT = {
     # 'UPDATE_LAST_LOGIN': False,
 
     'ALGORITHM': 'HS256',
-    'SIGNING_KEY': SECRET_KEY,
-    'VERIFYING_KEY': None,
+    'SIGNING_KEY': get_file(BASE_DIR + '/signing_key'),
+    'VERIFYING_KEY': get_file(BASE_DIR + '/signing_key.pub'),
     'AUDIENCE': None,
     'ISSUER': None,
     'JWK_URL': None,
@@ -216,7 +224,6 @@ CSRF_COOKIE_NAME = 'csrftoken_authorization'
 
 if DEBUG:
     ROSETTA_SHOW_AT_ADMIN_PANEL = True
-
 
 if JAEGER_AGENT_HOST := os.environ.get('JAEGER_AGENT_HOST'):
     from django_opentracing import DjangoTracing
