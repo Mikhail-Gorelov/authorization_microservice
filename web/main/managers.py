@@ -24,7 +24,7 @@ class UserManager(BaseUserManager):
 
     def create_user_by_phone(self, phone_number: str, password: str, **extra_fields: any) -> 'UserType':
         """
-        Create and save a User with the given email and password.
+        Create and save a User with the given phone and password.
         """
         user = self.model(phone_number=phone_number, **extra_fields)
         user.set_password(password)

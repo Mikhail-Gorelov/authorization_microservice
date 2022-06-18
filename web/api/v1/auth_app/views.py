@@ -91,8 +91,6 @@ class LogoutView(APIView):
             else:
                 response.data = {"detail": _("An error has occurred.")}
                 response.status_code = HTTP_500_INTERNAL_SERVER_ERROR
-
-        response.data['access_token'] = str(token.access_token)
         return response
 
 
