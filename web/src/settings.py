@@ -75,7 +75,8 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     'main.apps.MainConfig',
-    'auth_app.apps.AuthAppConfig'
+    'auth_app.apps.AuthAppConfig',
+    'profile_app.apps.ProfileAppConfig',
 ]
 
 INSTALLED_APPS += THIRD_PARTY_APPS + LOCAL_APPS

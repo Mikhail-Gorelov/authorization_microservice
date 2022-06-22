@@ -24,7 +24,7 @@ class CustomUserAdmin(UserAdmin):
 
     fieldsets = (
         (_('Personal info'), {'fields': ('id', 'first_name', 'last_name', 'email', 'phone_number', 'avatar',
-                                         'default_shipping_address', 'default_billing_address')}),
+                                         'default_shipping_address', 'default_billing_address', 'gender', 'birthday')}),
         (_('Secrets'), {'fields': ('password',)}),
         (
             _('Permissions'),

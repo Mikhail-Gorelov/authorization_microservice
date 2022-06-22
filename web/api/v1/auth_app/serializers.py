@@ -3,6 +3,7 @@ import re
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from django.utils import timezone
 from rest_framework import serializers
 from django.utils.encoding import force_str
@@ -15,6 +16,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from api.v1.auth_app.services import AuthAppService
+from main import models
 from main import choices
 from src.celery import app
 
@@ -72,7 +74,7 @@ class LoginSerializer(serializers.Serializer):
     def get_token(self, token):
         user_name = self.user.full_name()
         token['email'] = self.user.email
-        token['phone_number'] = self.user.phone_number
+        token['phone_number'] = str(self.user.phone_number)
         token['full_name'] = user_name
         return token
 
@@ -181,9 +183,3 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     def save(self, **kwargs):
         self.user.set_password(self.validated_data['new_password1'])
         self.user.save(update_fields=['password'])
-
-
-class GetUserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ("first_name", "last_name",)

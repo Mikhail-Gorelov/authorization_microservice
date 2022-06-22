@@ -5,7 +5,7 @@ from django.http import Http404
 from rest_framework import status
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import MethodNotAllowed
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.generics import get_object_or_404, CreateAPIView, RetrieveAPIView
 from rest_framework.status import HTTP_200_OK, HTTP_401_UNAUTHORIZED, HTTP_500_INTERNAL_SERVER_ERROR
 from rest_framework.views import APIView
@@ -96,10 +96,3 @@ class LogoutView(APIView):
 
 class VerifyJWTView(TokenVerifyView):
     pass
-
-
-class GetUserView(RetrieveAPIView):
-    serializer_class = serializers.GetUserSerializer
-
-    def get_object(self):
-        return self.request.user
