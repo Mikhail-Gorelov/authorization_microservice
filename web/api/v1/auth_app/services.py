@@ -6,14 +6,22 @@ from django.contrib.auth import get_user_model
 from django.core import signing
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
+from rest_framework_simplejwt.tokens import RefreshToken
+
 from main.decorators import except_shell
 from rest_framework.request import Request
 from rest_framework.response import Response
-
+from dataclasses import dataclass
 from src.celery import app
 from main.services import MainService
 
 User = get_user_model()
+
+
+@dataclass
+class UserToken:
+    access_token: str
+    refresh_token: str
 
 
 class AuthAppService:
@@ -23,13 +31,17 @@ class AuthAppService:
 
     @staticmethod
     def get_reset_url(uid, token):
-        url = f'/password-reset?uidb64={uid}&token={token}'
+        url = f'/Webshop/password-reset/{uid}/{token}'
         return settings.FRONTEND_SITE + str(url)
 
     @staticmethod
     def get_confirmation_url(user: User) -> str:
-        url = f'/confirm?key={user.confirmation_key}'
+        url = f'/Webshop/confirm/{user.confirmation_key}'
         return urljoin(settings.FRONTEND_SITE, url)
+
+    @staticmethod
+    def get_confirmation_key(user: User) -> str:
+        return user.confirmation_key
 
     @staticmethod
     def send_confirmation_email(user: User):
@@ -44,6 +56,20 @@ class AuthAppService:
         }
         app.send_task(
             name='email_sender.tasks.send_information_email',
+            kwargs=data,
+        )
+        return data
+
+    @staticmethod
+    def send_confirmation_sms(user: User):
+        activation_key = AuthAppService.get_confirmation_key(user)
+        full_name = user.full_name()
+        data = {
+            "body": f"Hello {full_name}! Nice to see you in Webshop! Enter this key to activate your account: {activation_key}",
+            "to": str(user.phone_number),
+        }
+        app.send_task(
+            name='sms_sender.tasks.send_information_sms',
             kwargs=data,
         )
         return data
@@ -66,6 +92,35 @@ class AuthAppService:
         return data
 
     @staticmethod
+    def send_verify_sms(phone_number: str, user: User, url: str):
+        full_name = user.full_name()
+        data = {
+            "body": f"Hello {full_name}! Nice to see you in Webshop! Follow this link to reset your account: {url}",
+            "to": str(phone_number),
+        }
+        app.send_task(
+            name='sms_sender.tasks.send_information_sms',
+            kwargs=data,
+        )
+        return data
+
+    @staticmethod
     @except_shell((User.DoesNotExist,))
     def get_user(email: str) -> User:
         return User.objects.get(email=email)
+
+    @staticmethod
+    @except_shell((User.DoesNotExist,))
+    def get_user_by_phone(phone_number: str) -> User:
+        return User.objects.get(phone_number=phone_number)
+
+    def generate_token(self, user: User):
+        refresh = RefreshToken.for_user(user)
+
+        return UserToken(
+            access_token=refresh.access_token,
+            refresh_token=refresh,
+        )
+
+    def login(self, user: User):
+        tokens = self.generate_token(user)

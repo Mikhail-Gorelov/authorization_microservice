@@ -1,11 +1,16 @@
 import os
 import re
+
+from django.contrib.sessions.backends.db import SessionStore
+from django.contrib.sessions.models import Session
+from phonenumber_field.serializerfields import PhoneNumberField
 from django.conf import settings
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, login
+from .authentication_classes import AuthenticationByPhone
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.utils import timezone
-from rest_framework import serializers
+from rest_framework import serializers, status
 from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -32,9 +37,10 @@ class UserLoginSerializer(serializers.ModelSerializer):
         fields = ['id', 'email', 'full_name', ]
 
 
-class LoginSerializer(serializers.Serializer):
+class LoginEmailSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(min_length=7, write_only=True)
+    remember_me = serializers.BooleanField()
 
     def authenticate(self, **kwargs) -> Optional['UserType']:
         return authenticate(self.context['request'], **kwargs)
@@ -43,11 +49,74 @@ class LoginSerializer(serializers.Serializer):
         self.user = self.authenticate(email=attrs['email'], password=attrs['password'])
         attrs['user'] = self.user
         if not self.user:
-            raise serializers.ValidationError(_('Wrong credentials'))
+            raise serializers.ValidationError(_('Wrong credentials'), code=status.HTTP_400_BAD_REQUEST)
         return attrs
 
     @property
     def data(self):
+        if self.validated_data['remember_me'] is True:
+            self.context['request'].session['user_id'] = self.user.pk
+            return_data = UserLoginSerializer(self.user).data
+            return_data['session_id'] = self.context['request'].session.session_key
+            return return_data
+        else:
+            if self.context['request'].session.has_key('user_id'):
+                del self.context['request'].session['user_id']
+
+        refresh = RefreshToken.for_user(self.user)
+        return_expiration_times = getattr(settings, 'JWT_AUTH_RETURN_EXPIRATION', False)
+
+        tokens = {
+            'access_token': str(self.get_token(refresh.access_token)),
+            'refresh_token': str(self.get_token(refresh)),
+        }
+
+        if return_expiration_times:
+            from rest_framework_simplejwt.settings import (
+                api_settings as jwt_settings,
+            )
+
+            access_token_expiration = (timezone.now() + jwt_settings.ACCESS_TOKEN_LIFETIME)
+            refresh_token_expiration = (timezone.now() + jwt_settings.REFRESH_TOKEN_LIFETIME)
+
+            tokens['access_token_expiration'] = access_token_expiration
+            tokens['refresh_token_expiration'] = refresh_token_expiration
+
+        tokens['user'] = UserLoginSerializer(self.user).data
+
+        return tokens
+
+    def get_token(self, token):
+        user_name = self.user.full_name()
+        token['email'] = self.user.email
+        token['phone_number'] = str(self.user.phone_number)
+        token['full_name'] = user_name
+        return token
+
+
+class LoginPhoneSerializer(serializers.Serializer):
+    phone_number = PhoneNumberField()
+    password = serializers.CharField(min_length=7, write_only=True)
+    remember_me = serializers.BooleanField()
+
+    def validate(self, attrs):
+        auth_by_phone = AuthenticationByPhone()
+        self.user = auth_by_phone.authenticate(request=self.context['request'], phone_number=attrs['phone_number'],
+                                               password=attrs['password'])
+        attrs['user'] = self.user
+        if not self.user:
+            raise serializers.ValidationError(_('Wrong credentials'), code=status.HTTP_400_BAD_REQUEST)
+        return attrs
+
+    @property
+    def data(self):
+        if self.validated_data['remember_me'] is True:
+            self.context['request'].session['user_id'] = self.user.pk
+            return UserLoginSerializer(self.user).data
+        else:
+            if self.context['request'].session.has_key('user_id'):
+                del self.context['request'].session['user_id']
+
         refresh = RefreshToken.for_user(self.user)
         return_expiration_times = getattr(settings, 'JWT_AUTH_RETURN_EXPIRATION', False)
 
@@ -91,7 +160,7 @@ class SignUpEmailSerializer(serializers.Serializer):
 
     def validate(self, attrs: dict) -> dict:
         if attrs['password'] != attrs['password1']:
-            raise serializers.ValidationError(_("Passwords does not match"))
+            raise serializers.ValidationError(_("Passwords does not match"), code=status.HTTP_400_BAD_REQUEST)
         return attrs
 
     def save(self, **kwargs):
@@ -102,37 +171,33 @@ class SignUpEmailSerializer(serializers.Serializer):
 
 
 class SignUpPhoneSerializer(serializers.Serializer):
-    phone_number = serializers.CharField(min_length=7, required=True)
+    phone_number = PhoneNumberField()
     password = serializers.CharField(write_only=True, min_length=7)
     password1 = serializers.CharField(write_only=True, min_length=7)
 
-    def validate_phone_number(self, phone_number: str) -> str:
-        pattern = re.compile("^\+?1?\d{7,15}$")
-        if not pattern.match(phone_number):
-            raise serializers.ValidationError(_("Wrong phone number format"))
-        if User.objects.filter(phone_number=phone_number).exists():
-            raise serializers.ValidationError(_("User with specified number already exists"))
-        return phone_number
-
     def validate(self, attrs: dict) -> dict:
+        if User.objects.filter(phone_number=attrs['phone_number']).exists():
+            raise serializers.ValidationError(_("The user with this number already exists"),
+                                              code=status.HTTP_400_BAD_REQUEST)
         if attrs['password'] != attrs['password1']:
-            raise serializers.ValidationError(_("Passwords does not match"))
+            raise serializers.ValidationError(_("Passwords does not match"), code=status.HTTP_400_BAD_REQUEST)
         return attrs
 
     def save(self, **kwargs):
         del self.validated_data['password1']
         user = User.objects.create_user_by_phone(**self.validated_data, is_active=False)
-        AuthAppService.send_confirmation_email(user)
+        # AuthAppService.send_confirmation_sms(user)
+        print(user.confirmation_key)
         return user
 
 
-class VerifyEmailSerializer(serializers.Serializer):
+class VerifySerializer(serializers.Serializer):
     key = serializers.CharField()
 
     def validate_key(self, key: str):
         self.user = User.from_key(key)
         if not self.user:
-            raise serializers.ValidationError(_("Invalid key"))
+            raise serializers.ValidationError(_("Invalid key"), code=status.HTTP_400_BAD_REQUEST)
         return key
 
     def save(self, **kwargs):
@@ -140,7 +205,7 @@ class VerifyEmailSerializer(serializers.Serializer):
         self.user.save(update_fields=['is_active'])
 
 
-class PasswordResetSerializer(serializers.Serializer):
+class PasswordResetEmailSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
     def save(self, **kwargs):
@@ -152,6 +217,21 @@ class PasswordResetSerializer(serializers.Serializer):
         token = default_token_generator.make_token(user)
         url = AuthAppService.get_reset_url(uid=uid, token=token)
         AuthAppService.send_verify_email(email=email, user=user, url=url)
+
+
+class PasswordResetPhoneSerializer(serializers.Serializer):
+    phone_number = PhoneNumberField()
+
+    def save(self, **kwargs):
+        phone_number = self.validated_data['phone_number']
+        user = AuthAppService.get_user_by_phone(phone_number=phone_number)
+        if not user:
+            return
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        url = AuthAppService.get_reset_url(uid=uid, token=token)
+        print(url)
+        # AuthAppService.send_verify_sms(phone_number=phone_number, user=user, url=url)
 
 
 class PasswordResetConfirmSerializer(serializers.Serializer):

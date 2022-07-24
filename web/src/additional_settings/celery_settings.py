@@ -29,4 +29,5 @@ celery_exchange = Exchange('celery', type='direct')  # topic, fanout
 
 CELERY_TASK_ROUTES = {
     'email_sender.tasks.*': {'queue': 'emails'},
+    'sms_sender.tasks.*': {'queue': 'sms'},
 }

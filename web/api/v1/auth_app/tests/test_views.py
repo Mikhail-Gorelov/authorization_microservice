@@ -4,7 +4,11 @@ from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import default_token_generator
 from rest_framework import status
+from django.core import mail
 from django.contrib.auth import get_user_model
+
+from api.v1.auth_app.services import AuthAppService
+from src.celery import app
 
 User = get_user_model()
 

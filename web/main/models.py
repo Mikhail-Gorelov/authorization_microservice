@@ -14,10 +14,8 @@ UserType = TypeVar('UserType', bound='User')
 
 
 class Address(models.Model):
-    street_address_1 = models.CharField(max_length=256, blank=True)
-    street_address_2 = models.CharField(max_length=256, blank=True)
+    street_address = models.CharField(max_length=256, blank=True)
     city = models.CharField(max_length=256, blank=True)
-    city_area = models.CharField(max_length=128, blank=True)
     postal_code = models.CharField(max_length=20, blank=True)
     country = CountryField()
     user = models.ForeignKey(
@@ -42,10 +40,10 @@ class User(AbstractUser):
         upload_to="user/", default="default_avatar.jpg"
     )
     updated = models.DateTimeField(auto_now=True, db_index=True)
-    default_shipping_address = models.ForeignKey(
+    default_shipping_address = models.OneToOneField(
         Address, related_name="user_default_shipping_address", null=True, blank=True, on_delete=models.SET_NULL
     )
-    default_billing_address = models.ForeignKey(
+    default_billing_address = models.OneToOneField(
         Address, related_name="user_default_billing_address", null=True, blank=True, on_delete=models.SET_NULL
     )
 
