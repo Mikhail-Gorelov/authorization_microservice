@@ -4,6 +4,7 @@ from urllib.parse import urljoin
 
 from django.contrib.auth import get_user_model
 from django.core import signing
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -22,6 +23,12 @@ User = get_user_model()
 class UserToken:
     access_token: str
     refresh_token: str
+
+
+@dataclass
+class UserTokenExpiration:
+    access_token_expiration: str
+    refresh_token_expiration: str
 
 
 class AuthAppService:
@@ -113,6 +120,22 @@ class AuthAppService:
     @except_shell((User.DoesNotExist,))
     def get_user_by_phone(phone_number: str) -> User:
         return User.objects.get(phone_number=phone_number)
+
+    def tokens_expiration_time(self):
+        expiration_time = getattr(settings, 'JWT_AUTH_RETURN_EXPIRATION', False)
+
+        if expiration_time:
+            from rest_framework_simplejwt.settings import (
+                api_settings as jwt_settings,
+            )
+
+            access_token_expiration = (timezone.now() + jwt_settings.ACCESS_TOKEN_LIFETIME)
+            refresh_token_expiration = (timezone.now() + jwt_settings.REFRESH_TOKEN_LIFETIME)
+
+            return UserTokenExpiration(
+                access_token_expiration=access_token_expiration,
+                refresh_token_expiration=refresh_token_expiration,
+            )
 
     def generate_token(self, user: User):
         refresh = RefreshToken.for_user(user)
