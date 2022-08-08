@@ -1,29 +1,18 @@
-import os
-import re
-
-from django.contrib.sessions.backends.db import SessionStore
-from django.contrib.sessions.models import Session
-from phonenumber_field.serializerfields import PhoneNumberField
-from django.conf import settings
-from django.contrib.auth import authenticate, login
-from .authentication_classes import AuthenticationByPhone
-from django.contrib.auth import get_user_model
-from django.contrib.auth.models import AnonymousUser
-from django.utils import timezone
-from rest_framework import serializers, status
-from django.utils.encoding import force_str
-from django.utils.translation import gettext_lazy as _
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.utils.http import urlsafe_base64_decode as uid_decoder
 from typing import TYPE_CHECKING, Optional
+
+from django.contrib.auth import authenticate
+from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode as uid_decoder
 from django.utils.http import urlsafe_base64_encode
+from django.utils.translation import gettext_lazy as _
+from phonenumber_field.serializerfields import PhoneNumberField
+from rest_framework import serializers, status
+
 from api.v1.auth_app.services import AuthAppService
-from main import models
-from main import choices
-from src.celery import app
+from .authentication_classes import AuthenticationByPhone
 
 if TYPE_CHECKING:
     from main.models import UserType
@@ -52,47 +41,6 @@ class LoginEmailSerializer(serializers.Serializer):
             raise serializers.ValidationError(_('Wrong credentials'), code=status.HTTP_400_BAD_REQUEST)
         return attrs
 
-    @property
-    def data(self):
-        if self.validated_data['remember_me'] is True:
-            self.context['request'].session['user_id'] = self.user.pk
-            return_data = UserLoginSerializer(self.user).data
-            return_data['session_id'] = self.context['request'].session.session_key
-            return return_data
-        else:
-            if self.context['request'].session.has_key('user_id'):
-                del self.context['request'].session['user_id']
-
-        refresh = RefreshToken.for_user(self.user)
-        return_expiration_times = getattr(settings, 'JWT_AUTH_RETURN_EXPIRATION', False)
-
-        tokens = {
-            'access_token': str(self.get_token(refresh.access_token)),
-            'refresh_token': str(self.get_token(refresh)),
-        }
-
-        if return_expiration_times:
-            from rest_framework_simplejwt.settings import (
-                api_settings as jwt_settings,
-            )
-
-            access_token_expiration = (timezone.now() + jwt_settings.ACCESS_TOKEN_LIFETIME)
-            refresh_token_expiration = (timezone.now() + jwt_settings.REFRESH_TOKEN_LIFETIME)
-
-            tokens['access_token_expiration'] = access_token_expiration
-            tokens['refresh_token_expiration'] = refresh_token_expiration
-
-        tokens['user'] = UserLoginSerializer(self.user).data
-
-        return tokens
-
-    def get_token(self, token):
-        user_name = self.user.full_name()
-        token['email'] = self.user.email
-        token['phone_number'] = str(self.user.phone_number)
-        token['full_name'] = user_name
-        return token
-
 
 class LoginPhoneSerializer(serializers.Serializer):
     phone_number = PhoneNumberField()
@@ -107,45 +55,6 @@ class LoginPhoneSerializer(serializers.Serializer):
         if not self.user:
             raise serializers.ValidationError(_('Wrong credentials'), code=status.HTTP_400_BAD_REQUEST)
         return attrs
-
-    @property
-    def data(self):
-        if self.validated_data['remember_me'] is True:
-            self.context['request'].session['user_id'] = self.user.pk
-            return UserLoginSerializer(self.user).data
-        else:
-            if self.context['request'].session.has_key('user_id'):
-                del self.context['request'].session['user_id']
-
-        refresh = RefreshToken.for_user(self.user)
-        return_expiration_times = getattr(settings, 'JWT_AUTH_RETURN_EXPIRATION', False)
-
-        tokens = {
-            'access_token': str(self.get_token(refresh.access_token)),
-            'refresh_token': str(self.get_token(refresh)),
-        }
-
-        if return_expiration_times:
-            from rest_framework_simplejwt.settings import (
-                api_settings as jwt_settings,
-            )
-
-            access_token_expiration = (timezone.now() + jwt_settings.ACCESS_TOKEN_LIFETIME)
-            refresh_token_expiration = (timezone.now() + jwt_settings.REFRESH_TOKEN_LIFETIME)
-
-            tokens['access_token_expiration'] = access_token_expiration
-            tokens['refresh_token_expiration'] = refresh_token_expiration
-
-        tokens['user'] = UserLoginSerializer(self.user).data
-
-        return tokens
-
-    def get_token(self, token):
-        user_name = self.user.full_name()
-        token['email'] = self.user.email
-        token['phone_number'] = str(self.user.phone_number)
-        token['full_name'] = user_name
-        return token
 
 
 class SignUpEmailSerializer(serializers.Serializer):
@@ -187,7 +96,6 @@ class SignUpPhoneSerializer(serializers.Serializer):
         del self.validated_data['password1']
         user = User.objects.create_user_by_phone(**self.validated_data, is_active=False)
         # AuthAppService.send_confirmation_sms(user)
-        print(user.confirmation_key)
         return user
 
 

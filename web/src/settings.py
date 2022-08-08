@@ -81,6 +81,11 @@ LOCAL_APPS = [
 
 INSTALLED_APPS += THIRD_PARTY_APPS + LOCAL_APPS
 
+CORS_ALLOW_CREDENTIALS = True
+JWT_AUTH_COOKIE = 'access_auth'
+JWT_AUTH_SECURE = False
+JWT_AUTH_REFRESH_COOKIE = 'refresh_auth'
+
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'main.middleware.HealthCheckMiddleware',

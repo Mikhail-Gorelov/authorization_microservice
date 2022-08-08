@@ -1,20 +1,17 @@
-import os
-import re
+from dataclasses import dataclass
 from urllib.parse import urljoin
 
-from django.contrib.auth import get_user_model
-from django.core import signing
-from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
 from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.status import HTTP_200_OK, HTTP_401_UNAUTHORIZED, HTTP_500_INTERNAL_SERVER_ERROR
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from main.decorators import except_shell
-from rest_framework.request import Request
-from rest_framework.response import Response
-from dataclasses import dataclass
 from src.celery import app
-from main.services import MainService
 
 User = get_user_model()
 
@@ -145,5 +142,63 @@ class AuthAppService:
             refresh_token=refresh,
         )
 
+    def set_jwt_cookies(self, response: Response, access_token: str, refresh_token: str):
+        if getattr(settings, 'REST_USE_JWT', True):
+            from .jwt_auth import set_jwt_cookies
+            set_jwt_cookies(response, access_token, refresh_token)
+        return response
+
     def login(self, user: User):
         tokens = self.generate_token(user)
+        expiration_time = self.tokens_expiration_time()
+        response_data = {
+            'access_token': str(tokens.access_token),
+            'refresh_token': str(tokens.refresh_token),
+            'access_token_expiration': expiration_time.access_token_expiration,
+            'refresh_token_expiration': expiration_time.refresh_token_expiration,
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'full_name': user.full_name()
+            }
+        }
+        response = Response(data=response_data)
+        self.set_jwt_cookies(response=response, access_token=tokens.access_token, refresh_token=tokens.refresh_token)
+        return response
+
+    def delete_jwt_cookies(self, request: Request):
+        response = Response({
+            "detail": "Successfully logged out."
+        }, status=HTTP_200_OK)
+        if cookie_name := getattr(settings, 'JWT_AUTH_COOKIE', None):
+            response.delete_cookie(cookie_name)
+        refresh_cookie_name = getattr(settings, 'JWT_AUTH_REFRESH_COOKIE', None)
+        refresh_token = request.COOKIES.get(refresh_cookie_name)
+        if refresh_cookie_name:
+            response.delete_cookie(refresh_cookie_name)
+        return response, refresh_token
+
+    def blacklist_refresh_token(self, response: Response, refresh_token: str):
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+        except KeyError:
+            response.data = {"detail": "Refresh token was not included in request data."}
+            response.status_code = HTTP_401_UNAUTHORIZED
+        except (TokenError, AttributeError, TypeError) as error:
+            if hasattr(error, 'args'):
+                if 'Token is blacklisted' in error.args or 'Token is invalid or expired' in error.args:
+                    response.data = {"detail": error.args[0]}
+                    response.status_code = HTTP_401_UNAUTHORIZED
+                else:
+                    response.data = {"detail": "An error has occurred."}
+                    response.status_code = HTTP_500_INTERNAL_SERVER_ERROR
+
+            else:
+                response.data = {"detail": "An error has occurred."}
+                response.status_code = HTTP_500_INTERNAL_SERVER_ERROR
+        return response
+
+    def full_logout(self, request: Request):
+        response, refresh_token = self.delete_jwt_cookies(request=request)
+        return self.blacklist_refresh_token(response, refresh_token)
