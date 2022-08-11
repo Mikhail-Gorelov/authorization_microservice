@@ -72,12 +72,6 @@ class SignUpEmailSerializer(serializers.Serializer):
             raise serializers.ValidationError(_("Passwords does not match"), code=status.HTTP_400_BAD_REQUEST)
         return attrs
 
-    def save(self, **kwargs):
-        del self.validated_data['password1']
-        user = User.objects.create_user(**self.validated_data, is_active=False)
-        AuthAppService.send_confirmation_email(user)
-        return user
-
 
 class SignUpPhoneSerializer(serializers.Serializer):
     phone_number = PhoneNumberField()

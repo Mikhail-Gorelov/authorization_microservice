@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import NamedTuple
 from urllib.parse import urljoin
 
 from django.conf import settings
@@ -28,7 +29,40 @@ class UserTokenExpiration:
     refresh_token_expiration: str
 
 
-class AuthAppService:
+class CreateUserData(NamedTuple):
+    email: str
+    password: str
+    password1: str
+
+
+class EmailSender:
+    subject = "Confirmation email"
+
+    def __init__(self, user: User):
+        self.user = user
+
+    def get_confirmation_url(self) -> str:
+        url = f'/Webshop/confirm/{self.user.confirmation_key}'
+        return urljoin(settings.FRONTEND_SITE, url)
+
+    def send_confirmation_email(self):
+        data = {
+            "subject": self.subject,
+            'template_name': 'auth_app/success_registration.html',
+            "to_email": self.user.email,
+            "context": {
+                "activate_url": EmailSender.get_confirmation_url(self.user),
+                "full_name": self.user.full_name()
+            }
+        }
+        app.send_task(
+            name='email_sender.tasks.send_information_email',
+            kwargs=data,
+        )
+        return data
+
+
+class AuthAppService(metaclass=type):
     @staticmethod
     def is_email_exists(email: str) -> bool:
         return User.objects.filter(email=email).exists()
@@ -39,30 +73,8 @@ class AuthAppService:
         return settings.FRONTEND_SITE + str(url)
 
     @staticmethod
-    def get_confirmation_url(user: User) -> str:
-        url = f'/Webshop/confirm/{user.confirmation_key}'
-        return urljoin(settings.FRONTEND_SITE, url)
-
-    @staticmethod
     def get_confirmation_key(user: User) -> str:
         return user.confirmation_key
-
-    @staticmethod
-    def send_confirmation_email(user: User):
-        data = {
-            "subject": "Confirmation email",
-            'template_name': 'auth_app/success_registration.html',
-            "to_email": user.email,
-            "context": {
-                "activate_url": AuthAppService.get_confirmation_url(user),
-                "full_name": user.full_name()
-            }
-        }
-        app.send_task(
-            name='email_sender.tasks.send_information_email',
-            kwargs=data,
-        )
-        return data
 
     @staticmethod
     def send_confirmation_sms(user: User):
@@ -202,3 +214,9 @@ class AuthAppService:
     def full_logout(self, request: Request):
         response, refresh_token = self.delete_jwt_cookies(request=request)
         return self.blacklist_refresh_token(response, refresh_token)
+
+    def create_user(self, validated_data: dict):
+        data = CreateUserData(**validated_data)
+        user = User.objects.create_user(email=data.email, password=data.password, is_active=False)
+        AuthAppService.send_confirmation_email(user)
+        return user

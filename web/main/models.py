@@ -34,7 +34,7 @@ class User(AbstractUser):
     username = None
     email = models.EmailField(_('Email address'), unique=True, null=True, blank=True)
     phone_number = PhoneNumberField(null=True, blank=True, unique=True, default=None)
-    gender = models.IntegerField(choices=choices.GenderChoice.choices, null=True)
+    gender = models.IntegerField(choices=choices.GenderChoice.choices, null=True, blank=True)
     birthday = models.DateField(null=True, blank=True)
     avatar = models.ImageField(
         upload_to="user/", default="default_avatar.jpg"

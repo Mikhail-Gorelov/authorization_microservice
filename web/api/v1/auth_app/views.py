@@ -1,16 +1,11 @@
 import logging
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.utils.translation import gettext_lazy as _
 from rest_framework.generics import CreateAPIView
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.status import HTTP_200_OK, HTTP_401_UNAUTHORIZED, HTTP_500_INTERNAL_SERVER_ERROR
 from rest_framework.views import APIView
-from rest_framework_simplejwt.exceptions import TokenError
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenVerifyView, TokenRefreshView
 
 from . import serializers
@@ -30,7 +25,6 @@ class LoginEmailView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.user
         handler = AuthAppService()
-        handler.login(user)
         return handler.login(user)
 
 
@@ -43,13 +37,21 @@ class LoginPhoneView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.user
         handler = AuthAppService()
-        handler.login(user)
         return handler.login(user)
 
 
-class SignUpEmailView(CreateAPIView):
+class SignUpEmailView(GenericAPIView):
     permission_classes = (AllowAny,)
     serializer_class = serializers.SignUpEmailSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        handler = AuthAppService()
+        handler.create_user(serializer.validated_data)
+        print(handler)
+        print(AuthAppService)
+        return Response()
 
 
 class SignUpPhoneView(CreateAPIView):
