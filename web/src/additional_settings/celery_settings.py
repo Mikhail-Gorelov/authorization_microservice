@@ -31,3 +31,5 @@ CELERY_TASK_ROUTES = {
     'email_sender.tasks.*': {'queue': 'emails'},
     'sms_sender.tasks.*': {'queue': 'sms'},
 }
+
+CELERY_BEAT_SCHEDULE: dict[str, dict] = {}

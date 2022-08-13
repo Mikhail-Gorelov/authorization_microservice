@@ -50,17 +50,14 @@ class User(AbstractUser):
     USERNAME_FIELD: str = 'email'
     REQUIRED_FIELDS: list[str] = []
 
-    objects = UserManager()
+    objects = UserManager()  # type: ignore
 
     class Meta:
         verbose_name = _('User')
         verbose_name_plural = _('Users')
 
     def __str__(self) -> str:
-        if self.email:
-            return self.email
-        else:
-            return str(self.phone_number)
+        return self.email or str(self.phone_number)
 
     def full_name(self) -> str:
         return super().get_full_name()

@@ -19,12 +19,12 @@ ALLOWED_HOSTS: list = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
 
 AUTH_USER_MODEL = 'main.User'
 
+SUPERUSER_EMAIL = os.environ.get('SUPERUSER_EMAIL', 'test@test.com')
+SUPERUSER_PASSWORD = os.environ.get('SUPERUSER_PASSWORD', 'tester26')
+
 FRONTEND_SITE = os.environ.get('FRONTEND_SITE', 'http://localhost:8000')
 
 EMAIL_CONFIRMATION_EXPIRE_SECONDS = 172800  # 2 days
-
-SUPERUSER_EMAIL = os.environ.get('SUPERUSER_EMAIL', 'test@test.com')
-SUPERUSER_PASSWORD = os.environ.get('SUPERUSER_PASSWORD', 'tester26')
 
 NOTIFICATIONS_API_URL = os.environ.get('NOTIFICATIONS_API_URL')
 NOTIFICATIONS_API_KEY = os.environ.get('NOTIFICATIONS_API_KEY')
@@ -38,7 +38,6 @@ USE_HTTPS = int(os.environ.get('USE_HTTPS', 0))
 ENABLE_SENTRY = int(os.environ.get('ENABLE_SENTRY', 0))
 ENABLE_SILK = int(os.environ.get('ENABLE_SILK', 0))
 ENABLE_DEBUG_TOOLBAR = int(os.environ.get('ENABLE_DEBUG_TOOLBAR', 0))
-ENABLE_RENDERING = int(os.environ.get('ENABLE_RENDERING', 0))
 
 INTERNAL_IPS: list[str] = []
 
@@ -137,13 +136,6 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ('django_filters.rest_framework.DjangoFilterBackend',),
 }
 
-if ENABLE_RENDERING:
-    """For build CMS using DRF"""
-    REST_FRAMEWORK['DEFAULT_RENDERER_CLASSES'] = (
-        'rest_framework.renderers.JSONRenderer',
-        'rest_framework.renderers.TemplateHTMLRenderer',
-    )
-
 ROOT_URLCONF = 'src.urls'
 
 LOGIN_URL = 'rest_framework:login'
@@ -198,7 +190,7 @@ AUTH_PASSWORD_VALIDATORS = [
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.environ.get('REDIS_SOCKET', 'unix:///redis_socket/redis-server.sock?db=1'),
+        'LOCATION': REDIS_URL,
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         },
@@ -215,9 +207,6 @@ USE_L10N = True
 
 USE_TZ = True
 
-TIMEZONE_COOKIE_NAME = 'timezone'
-TIMEZONE_COOKIE_AGE = 15552000  # 60*60*24*180
-
 STATIC_URL = f'{MICROSERVICE_PREFIX}/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
@@ -231,32 +220,7 @@ LANGUAGES = (('en', _('English')),)
 SESSION_COOKIE_NAME = 'sessionid_authorization'
 CSRF_COOKIE_NAME = 'csrftoken_authorization'
 
-if DEBUG:
-    ROSETTA_SHOW_AT_ADMIN_PANEL = True
-
-if JAEGER_AGENT_HOST := os.environ.get('JAEGER_AGENT_HOST'):
-    from django_opentracing import DjangoTracing
-    from jaeger_client import Config
-    from jaeger_client.config import DEFAULT_REPORTING_PORT
-
-    """If you don't need to trace all requests, comment middleware and set OPENTRACING_TRACE_ALL = False
-        More information https://github.com/opentracing-contrib/python-django/#tracing-individual-requests
-    """
-    MIDDLEWARE.insert(0, 'django_opentracing.OpenTracingMiddleware')
-    OPENTRACING_TRACE_ALL = True
-    tracer = Config(
-        config={
-            'sampler': {'type': 'const', 'param': 1},
-            'local_agent': {
-                'reporting_port': os.environ.get('JAEGER_AGENT_PORT', DEFAULT_REPORTING_PORT),
-                'reporting_host': JAEGER_AGENT_HOST,
-            },
-            'logging': int(os.environ.get('JAEGER_LOGGING', False)),
-        },
-        service_name=MICROSERVICE_TITLE,
-        validate=True,
-    ).initialize_tracer()
-    OPENTRACING_TRACING = DjangoTracing(tracer)
+ROSETTA_SHOW_AT_ADMIN_PANEL = DEBUG
 
 if (SENTRY_DSN := os.environ.get('SENTRY_DSN')) and ENABLE_SENTRY:
     # More information on site https://sentry.io/

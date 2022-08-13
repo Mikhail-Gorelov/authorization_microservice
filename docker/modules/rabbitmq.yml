@@ -27,4 +27,3 @@ volumes:
 networks:
   queue_network:
     driver: bridge
-    name: rabbitmq_queue_network

@@ -1,10 +1,10 @@
 from typing import TYPE_CHECKING
 
 from django.conf import settings
-from drf_yasg.utils import swagger_auto_schema
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny
+from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -19,10 +19,11 @@ class TemplateAPIView(APIView):
     path('some-path/', TemplateAPIView.as_view(template_name='template.html'))
     """
 
+    swagger_schema = None
     permission_classes = (AllowAny,)
+    renderer_classes = (JSONRenderer, TemplateHTMLRenderer)
     template_name: str = ''
 
-    @swagger_auto_schema(auto_schema=None)
     def get(self, request: 'Request', *args, **kwargs):
         return Response()
 
