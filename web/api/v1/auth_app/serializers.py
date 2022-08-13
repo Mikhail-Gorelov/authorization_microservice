@@ -12,7 +12,7 @@ from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers, status
 
 from api.v1.auth_app.services import AuthAppService
-from .authentication_classes import AuthenticationByPhone
+from auth_app.authentication_classes import AuthenticationByPhone
 
 if TYPE_CHECKING:
     from main.models import UserType
@@ -34,11 +34,11 @@ class LoginEmailSerializer(serializers.Serializer):
     def authenticate(self, **kwargs) -> Optional['UserType']:
         return authenticate(self.context['request'], **kwargs)
 
-    def validate(self, attrs):
+    def validate(self, attrs: dict):
         self.user = self.authenticate(email=attrs['email'], password=attrs['password'])
         attrs['user'] = self.user
         if not self.user:
-            raise serializers.ValidationError(_('Wrong credentials'), code=status.HTTP_400_BAD_REQUEST)
+            raise serializers.ValidationError(_('Wrong credentials'))
         return attrs
 
 
@@ -47,13 +47,16 @@ class LoginPhoneSerializer(serializers.Serializer):
     password = serializers.CharField(min_length=7, write_only=True)
     remember_me = serializers.BooleanField()
 
-    def validate(self, attrs):
+    def validate(self, attrs: dict):
         auth_by_phone = AuthenticationByPhone()
-        self.user = auth_by_phone.authenticate(request=self.context['request'], phone_number=attrs['phone_number'],
-                                               password=attrs['password'])
+        self.user = auth_by_phone.authenticate(
+            request=self.context['request'],
+            phone_number=attrs['phone_number'],
+            password=attrs['password'],
+        )
         attrs['user'] = self.user
         if not self.user:
-            raise serializers.ValidationError(_('Wrong credentials'), code=status.HTTP_400_BAD_REQUEST)
+            raise serializers.ValidationError(_('Wrong credentials'))
         return attrs
 
 
@@ -69,7 +72,7 @@ class SignUpEmailSerializer(serializers.Serializer):
 
     def validate(self, attrs: dict) -> dict:
         if attrs['password'] != attrs['password1']:
-            raise serializers.ValidationError(_("Passwords does not match"), code=status.HTTP_400_BAD_REQUEST)
+            raise serializers.ValidationError(_("Passwords does not match"))
         return attrs
 
 

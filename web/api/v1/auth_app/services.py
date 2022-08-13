@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import NamedTuple
 from urllib.parse import urljoin
-from .jwt_auth import set_jwt_cookies
+from auth_app.jwt_auth import set_jwt_access_cookie, set_jwt_refresh_cookie
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -155,7 +155,8 @@ class AuthAppService(metaclass=type):
         )
 
     def set_jwt_cookies(self, response: Response, access_token: str, refresh_token: str):
-        set_jwt_cookies(response, access_token, refresh_token)
+        set_jwt_access_cookie(response, access_token)
+        set_jwt_refresh_cookie(response, refresh_token)
         return response
 
     def login(self, user: User):

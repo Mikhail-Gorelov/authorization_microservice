@@ -22,8 +22,6 @@ django-cors-headers~=3.13.0
 django-defender==0.9.5
 
 # for auth system
-django-allauth==0.50.0
-dj-rest-auth~=2.2
 djangorestframework-simplejwt==5.2.0
 
 # Cashe Support

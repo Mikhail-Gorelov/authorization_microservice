@@ -47,11 +47,6 @@ def set_jwt_refresh_cookie(response, refresh_token):
         )
 
 
-def set_jwt_cookies(response, access_token, refresh_token):
-    set_jwt_access_cookie(response, access_token)
-    set_jwt_refresh_cookie(response, refresh_token)
-
-
 def import_callable(path_or_callable):
     if hasattr(path_or_callable, '__call__'):
         return path_or_callable
