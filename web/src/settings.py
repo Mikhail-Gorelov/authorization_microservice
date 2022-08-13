@@ -87,7 +87,7 @@ JWT_AUTH_SECURE = False
 JWT_AUTH_REFRESH_COOKIE = 'refresh_auth'
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
+    # 'corsheaders.middleware.CorsMiddleware',
     'main.middleware.HealthCheckMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
