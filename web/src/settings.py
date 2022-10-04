@@ -29,7 +29,7 @@ EMAIL_CONFIRMATION_EXPIRE_SECONDS = 172800  # 2 days
 NOTIFICATIONS_API_URL = os.environ.get('NOTIFICATIONS_API_URL')
 NOTIFICATIONS_API_KEY = os.environ.get('NOTIFICATIONS_API_KEY')
 
-MICROSERVICE_TITLE = os.environ.get('MICROSERVICE_TITLE', 'Template')
+MICROSERVICE_TITLE = os.environ.get('MICROSERVICE_TITLE', 'Authorization microservice')
 MICROSERVICE_PREFIX = os.environ.get('MICROSERVICE_PREFIX', '')
 
 REDIS_URL = os.environ.get('REDIS_URL', 'redis://redis:6379')
