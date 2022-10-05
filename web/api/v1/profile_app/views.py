@@ -1,11 +1,13 @@
-from rest_framework.generics import RetrieveAPIView, GenericAPIView
-from rest_framework.parsers import MultiPartParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.generics import RetrieveAPIView, GenericAPIView, ListAPIView
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from django.contrib.auth import get_user_model
 
+from api.v1.profile_app import serializers
 from api.v1.profile_app.permissions import IsAuthenticatedOrNot
 from main import models
-from api.v1.profile_app import serializers
+
+User = get_user_model()
 
 
 class GetUserView(RetrieveAPIView):
@@ -81,3 +83,15 @@ class ChangeShippingAddressView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class ListEmailsView(GenericAPIView):
+    permission_classes = (AllowAny,)
+    serializer_class = serializers.ListEmailsSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        users = [i[0] for i in list(User.objects.filter(id__in=serializer.data['users']).values_list('email'))
+                 if i[0] != '']
+        return Response(users)

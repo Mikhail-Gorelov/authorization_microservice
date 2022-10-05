@@ -94,3 +94,7 @@ class ChangeAddressSerializer(CountryFieldMixin, serializers.ModelSerializer):
     class Meta:
         model = models.Address
         fields = ("street_address", "city", "postal_code", "country")
+
+
+class ListEmailsSerializer(serializers.Serializer):
+    users = serializers.ListField(child=serializers.IntegerField())
