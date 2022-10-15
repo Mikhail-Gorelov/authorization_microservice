@@ -30,7 +30,8 @@ class GetUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            "first_name", "last_name", "email", "phone_number", "gender", "birthday", "avatar",
+            "id", "first_name", "last_name", "email",
+            "phone_number", "gender", "birthday", "avatar",
             "default_shipping_address",
             "default_billing_address"
         )
